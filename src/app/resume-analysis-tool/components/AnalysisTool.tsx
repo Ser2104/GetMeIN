@@ -95,7 +95,7 @@ export default function AnalysisTool() {
   };
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-10" suppressHydrationWarning>
       {appState === 'idle' && (
         <>
           <HeroSection />
