@@ -1,6 +1,17 @@
+import { headers } from 'next/headers';
 import { callAIEndpoint } from './aiClient';
 
-const ENDPOINT = '/api/ai/chat-completion';
+async function getBaseUrl() {
+  const h = await headers();
+  const host = h.get('host');
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+
+  if (!host) {
+    throw new Error('Could not determine host for AI endpoint');
+  }
+
+  return `${protocol}://${host}`;
+}
 
 export async function getChatCompletion(
   provider: string,
@@ -8,7 +19,10 @@ export async function getChatCompletion(
   messages: object[],
   parameters: object = {}
 ) {
-  return callAIEndpoint(ENDPOINT, {
+  const baseUrl = await getBaseUrl();
+  const endpoint = `${baseUrl}/api/ai/chat-completion`;
+
+  return callAIEndpoint(endpoint, {
     provider,
     model,
     messages,
@@ -27,7 +41,10 @@ export async function getStreamingChatCompletion(
   parameters: object = {}
 ) {
   try {
-    const response = await fetch(ENDPOINT, {
+    const baseUrl = await getBaseUrl();
+    const endpoint = `${baseUrl}/api/ai/chat-completion`;
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider, model, messages, stream: true, parameters }),
@@ -56,24 +73,16 @@ export async function getStreamingChatCompletion(
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.type === 'chunk' && data.chunk) {
-              onChunk(data.chunk);
-            } else if (data.type === 'done') onComplete();
-            else if (data.type === 'error') {
-              console.error('API Route Error:', {
-                error: data.error,
-                details: data.details,
-              });
-              onError(new Error(data.error));
-            }
+            if (data.type === 'chunk' && data.chunk) onChunk(data.chunk);
+            else if (data.type === 'done') onComplete();
+            else if (data.type === 'error') onError(new Error(data.error));
           } catch {
-            // Skip invalid JSON
+            // ignore invalid JSON chunks
           }
         }
       }
     }
   } catch (error) {
-    console.error('Streaming error:', error);
     onError(error instanceof Error ? error : new Error('Streaming error'));
   }
 }
