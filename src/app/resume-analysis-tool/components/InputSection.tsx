@@ -25,8 +25,11 @@ interface UploadedFile {
 function getFileTypeLabel(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
   if (ext === 'pdf') return 'PDF';
-  if (ext === 'docx' || ext === 'doc') return 'DOCX';
+  if (ext === 'docx') return 'DOCX';
+  if (ext === 'doc') return 'DOC';
   if (ext === 'txt') return 'TXT';
+  if (ext === 'png') return 'PNG';
+  if (ext === 'jpg' || ext === 'jpeg') return 'JPG';
   return ext.toUpperCase();
 }
 
@@ -42,9 +45,16 @@ async function extractTextFromFile(file: File): Promise<string> {
     });
   }
 
-  if (ext === 'pdf' || ext === 'docx' || ext === 'doc') {
-    // PDF/DOCX require server-side parsing — prompt user to paste text manually
+  if (ext === 'doc') {
+    throw new Error('Legacy .doc files are not fully supported yet. Please convert your file to .docx or PDF and try again.');
+  }
+
+  if (ext === 'pdf' || ext === 'docx') {
     throw new Error('We couldn\'t read this file. Please try another file or paste the text manually.');
+  }
+
+  if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') {
+    throw new Error('Image files cannot be parsed as text. Please paste your content manually or upload a PDF, DOCX, or TXT file.');
   }
 
   return '';
@@ -129,12 +139,12 @@ function FileInputPanel({ accentColor, uploadedFile, onFileSelect, onClear, disa
       <div className="text-center px-4">
         <p className="text-sm font-semibold text-zinc-200">Drop your file here</p>
         <p className="text-xs text-zinc-500 mt-1">or click to browse</p>
-        <p className="text-xs text-zinc-600 mt-2">Supports PDF, DOCX, TXT</p>
+        <p className="text-xs text-zinc-600 mt-2">Supports PDF, DOCX, DOC, TXT, PNG, JPG</p>
       </div>
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.txt"
+        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
         onChange={handleFileChange}
         className="hidden"
         disabled={disabled}
@@ -270,7 +280,7 @@ export default function InputSection({
             </div>
           </div>
           <p className="text-xs text-zinc-500 -mt-1">
-            {jdMode === 'paste' ? 'Paste the full job posting including responsibilities and requirements.' : 'Upload a PDF, DOCX, or TXT file of the job posting.'}
+            {jdMode === 'paste' ? 'Paste the full job posting including responsibilities and requirements.' : 'Upload a PDF, DOCX, DOC, TXT, or image file of the job posting.'}
           </p>
 
           {jdMode === 'paste' ? (
@@ -340,7 +350,7 @@ export default function InputSection({
             </div>
           </div>
           <p className="text-xs text-zinc-500 -mt-1">
-            {resumeMode === 'paste' ? 'Paste the plain-text version of your resume. Include all sections.' : 'Upload a PDF, DOCX, or TXT version of your resume.'}
+            {resumeMode === 'paste' ? 'Paste the plain-text version of your resume. Include all sections.' : 'Upload a PDF, DOCX, DOC, TXT, or image file of your resume.'}
           </p>
 
           {resumeMode === 'paste' ? (
