@@ -142,10 +142,15 @@ ${resumeText.trim()}`;
     }
 
     return NextResponse.json(parsed);
-  } catch (err: unknown) {
-    console.error('Analyze route error:', err);
+  } catch (err: any) {
+    console.error('Analyze route error FULL:', err);
+
     return NextResponse.json(
-      { error: 'Analysis failed. Please check your connection and try again.' },
+      { 
+        error: 'Analysis failed',
+       details: err?.message || String(err),
+        full: err
+      },
       { status: 500 }
     );
   }
