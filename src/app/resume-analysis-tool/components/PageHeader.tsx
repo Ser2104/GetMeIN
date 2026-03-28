@@ -9,7 +9,7 @@ export default function PageHeader() {
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
           <span className="font-bold text-lg tracking-tight text-white hidden sm:block">
-            ResumeFit <span className="text-gradient">AI</span>
+            Get<span className="text-gradient">MeIn</span>
           </span>
         </div>
 

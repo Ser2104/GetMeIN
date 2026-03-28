@@ -14,7 +14,7 @@ export default function HeroSection({ compact = false }: HeroSectionProps) {
         </div>
         <div>
           <h1 className="text-base font-bold text-white leading-tight">
-            ResumeFit <span className="text-gradient">AI</span>
+            Get<span className="text-gradient">MeIn</span>
           </h1>
           <p className="text-xs text-zinc-500">Analyzing your resume against the job description…</p>
         </div>
@@ -35,7 +35,7 @@ export default function HeroSection({ compact = false }: HeroSectionProps) {
       </h1>
 
       <p className="text-base sm:text-lg text-zinc-400 max-w-xl leading-relaxed">
-        Paste a job description and your resume. Get an instant AI analysis — match score, keyword gaps, weak areas, and rewritten bullet points ready to copy.
+        Paste or upload your resume and a job description. Get an instant AI analysis — match score, keyword gaps, weak areas, and rewritten bullet points ready to copy.
       </p>
 
       <div className="flex items-center gap-6 sm:gap-8 mt-2 flex-wrap justify-center">
