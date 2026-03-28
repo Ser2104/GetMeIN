@@ -61,18 +61,26 @@ export default function AnalysisTool() {
         }),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
 
-      if (!response.ok) {
-        const msg =
-          data?.details ||
-          data?.error ||
-          'Analysis failed. Please try again.';
-        setAppState('error');
-        setErrorMessage(msg);
-        toast.error(data?.error || 'Analysis failed.');
-        return;
-      }
+    let data: any = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = { error: raw || 'Server returned invalid JSON' };
+    }
+
+    if (!response.ok) {
+      const msg =
+        data?.details ||
+        data?.error ||
+        raw ||
+        'Analysis failed. Please try again.';
+      setAppState('error');
+      setErrorMessage(msg);
+      toast.error(data?.error || 'Analysis failed.');
+      return;
+    }
 
       setResult(data as AnalysisResult);
       setAppState('results');
