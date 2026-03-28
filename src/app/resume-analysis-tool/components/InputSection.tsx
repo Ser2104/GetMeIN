@@ -303,6 +303,7 @@ export default function InputSection({
                   disabled={disabled}
                   placeholder={`Paste the job description here…\n\nExample:\n"We're looking for a Senior Frontend Engineer with 4+ years of React experience, strong TypeScript skills, and experience with AWS services…"`}
                   className="w-full h-64 bg-[hsl(240_10%_6%)] text-zinc-200 text-sm leading-relaxed px-4 py-3.5 resize-none focus:outline-none placeholder:text-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  suppressHydrationWarning
                 />
               </div>
             </>
@@ -373,6 +374,7 @@ export default function InputSection({
                   disabled={disabled}
                   placeholder={`Paste your resume content here…\n\nExample:\nJane Reyes | jane.reyes@email.com | linkedin.com/in/janereyes\n\nSummary\nFrontend engineer with 5 years of experience building scalable React applications…`}
                   className="w-full h-64 bg-[hsl(240_10%_6%)] text-zinc-200 text-sm leading-relaxed px-4 py-3.5 resize-none focus:outline-none placeholder:text-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  suppressHydrationWarning
                 />
               </div>
             </>
