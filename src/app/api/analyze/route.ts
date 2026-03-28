@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getChatCompletion } from '@/lib/ai/chatCompletion';
+import { completion } from '@rocketnew/llm-sdk';
 
 const ANALYSIS_SYSTEM_PROMPT = `You are an expert resume evaluator and job-fit analyst.
 
@@ -46,17 +46,26 @@ Only output JSON. No extra text.`;
 function isMeaningfulText(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length < 50) return false;
-  // Must have at least 5 words
   const wordCount = trimmed.split(/\s+/).filter((w) => w.length > 1).length;
   return wordCount >= 5;
 }
+
+type ParsedAnalysis = {
+  matchScore: number;
+  callbackPotential: 'Low' | 'Medium' | 'High';
+  strongMatches: string[];
+  missingSkillsOrKeywords: string[];
+  weakAreas: string[];
+  suggestedImprovements: string[];
+  tailoredBulletRewrites: { originalIdea: string; improvedVersion: string }[];
+  finalAssessment: string;
+};
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { resumeText, jobDescriptionText } = body;
 
-    // Validate inputs
     if (!resumeText || typeof resumeText !== 'string' || !isMeaningfulText(resumeText)) {
       return NextResponse.json(
         { error: 'We need readable text from both the resume and the job description before we can analyze the match.' },
@@ -71,72 +80,87 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userMessage = `JOB DESCRIPTION:
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'OPENAI_API_KEY is not configured.' },
+        { status: 500 }
+      );
+    }
+
+    const messages = [
+      { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `JOB DESCRIPTION:
 ${jobDescriptionText.trim()}
 
 ---
 
 RESUME:
-${resumeText.trim()}`;
-
-    const aiResponse = await getChatCompletion(
-      'OPEN_AI',
-      'gpt-4o',
-      [
-        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
-      ],
-      {
-        max_completion_tokens: 2000,
-        temperature: 1,
+${resumeText.trim()}`
       }
-    );
+    ];
+
+    const aiResponse = await completion({
+      model: 'gpt-4o',
+      messages,
+      stream: false,
+      api_key: apiKey,
+      temperature: 0.3,
+      max_completion_tokens: 2000,
+    });
 
     const rawContent =
-      aiResponse?.choices?.[0]?.message?.content ||
-      aiResponse?.content ||
-      aiResponse?.output_text ||
-      aiResponse?.text;
+      (aiResponse as any)?.choices?.[0]?.message?.content ||
+      (aiResponse as any)?.content ||
+      (aiResponse as any)?.output_text ||
+      (aiResponse as any)?.text;
 
-    if (!rawContent) {
+    if (!rawContent || typeof rawContent !== 'string') {
       return NextResponse.json(
-        { error: 'The AI did not return a valid response. Please try again.' },
+        {
+          error: 'The AI did not return a valid response.',
+          details: JSON.stringify(aiResponse, null, 2),
+        },
         { status: 500 }
       );
     }
 
-    // Strip markdown code fences if present
-    const cleaned = rawContent.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const cleaned = rawContent
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
 
-    let parsed: {
-      matchScore: number;
-      callbackPotential: 'Low' | 'Medium' | 'High';
-      strongMatches: string[];
-      missingSkillsOrKeywords: string[];
-      weakAreas: string[];
-      suggestedImprovements: string[];
-      tailoredBulletRewrites: { originalIdea: string; improvedVersion: string }[];
-      finalAssessment: string;
-    };
+    let parsed: ParsedAnalysis;
 
     try {
       parsed = JSON.parse(cleaned);
     } catch {
       return NextResponse.json(
-        { error: 'The AI returned an unexpected format. Please try again.' },
+        {
+          error: 'The AI returned an unexpected format.',
+          details: cleaned,
+        },
         { status: 500 }
       );
     }
 
-    // Validate required fields
     if (
       typeof parsed.matchScore !== 'number' ||
       !parsed.callbackPotential ||
       !Array.isArray(parsed.strongMatches) ||
-      !Array.isArray(parsed.missingSkillsOrKeywords)
+      !Array.isArray(parsed.missingSkillsOrKeywords) ||
+      !Array.isArray(parsed.weakAreas) ||
+      !Array.isArray(parsed.suggestedImprovements) ||
+      !Array.isArray(parsed.tailoredBulletRewrites) ||
+      typeof parsed.finalAssessment !== 'string'
     ) {
       return NextResponse.json(
-        { error: 'The AI returned incomplete analysis data. Please try again.' },
+        {
+          error: 'The AI returned incomplete analysis data.',
+          details: JSON.stringify(parsed, null, 2),
+        },
         { status: 500 }
       );
     }
@@ -146,10 +170,9 @@ ${resumeText.trim()}`;
     console.error('Analyze route error FULL:', err);
 
     return NextResponse.json(
-      { 
+      {
         error: 'Analysis failed',
-       details: err?.message || String(err),
-        full: err
+        details: err?.message || String(err),
       },
       { status: 500 }
     );
