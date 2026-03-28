@@ -6,14 +6,24 @@ export async function callAIEndpoint(endpoint: string, payload: object) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const raw = await response.text();
 
-    if (!response.ok || data.error) {
+    let data: any = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      throw new Error(raw || 'Invalid JSON response from AI endpoint');
+    }
+
+    if (!response.ok || data?.error) {
       console.error('API Route Error:', {
-        error: data.error,
-        details: data.details,
+        error: data?.error,
+        details: data?.details,
+        raw,
       });
-      throw new Error(data.error || `Request failed: ${response.status}`);
+      throw new Error(
+        data?.details || data?.error || raw || `Request failed: ${response.status}`
+      );
     }
 
     return data;
@@ -22,3 +32,4 @@ export async function callAIEndpoint(endpoint: string, payload: object) {
     throw error;
   }
 }
+
