@@ -8,22 +8,26 @@ import AnalysisLoadingSkeleton from './AnalysisLoadingSkeleton';
 import { toast } from 'sonner';
 
 export interface AnalysisResult {
-  overallScore: number;
+  matchScore: number;
   callbackPotential: 'Low' | 'Medium' | 'High';
-  applicationCompetitiveness: string;
-  keywordCoverage: number;
-  keywordsFound: string[];
-  keywordsMissing: string[];
-  strengths: { title: string; description: string }[];
-  weakAreas: { title: string; description: string; severity: 'high' | 'medium' | 'low' }[];
-  improvements: { area: string; suggestion: string }[];
-  bulletRewrites: { original: string; rewritten: string; reason: string }[];
-  experienceAlignment: number;
-  skillsMatchPercent: number;
-  atsRiskLevel: 'Low' | 'Medium' | 'High';
+  strongMatches: string[];
+  missingSkillsOrKeywords: string[];
+  weakAreas: string[];
+  suggestedImprovements: string[];
+  tailoredBulletRewrites: { originalIdea: string; improvedVersion: string }[];
+  finalAssessment: string;
 }
 
 type AppState = 'idle' | 'analyzing' | 'results' | 'error';
+
+const VALIDATION_ERROR = 'We need readable text from both the resume and the job description before we can analyze the match.';
+
+function isMeaningfulContent(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < 50) return false;
+  const wordCount = trimmed.split(/\s+/).filter((w) => w.length > 1).length;
+  return wordCount >= 5;
+}
 
 export default function AnalysisTool() {
   const [appState, setAppState] = useState<AppState>('idle');
@@ -33,12 +37,13 @@ export default function AnalysisTool() {
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleAnalyze = async () => {
-    if (!jobDescription.trim() || jobDescription.trim().length < 50) {
-      toast.error('Job description is too short. Please paste the full job posting.');
+    // Real input validation — block analysis if content is missing or unreadable
+    if (!isMeaningfulContent(jobDescription)) {
+      toast.error(VALIDATION_ERROR);
       return;
     }
-    if (!resume.trim() || resume.trim().length < 100) {
-      toast.error('Resume content is too short. Please paste your complete resume.');
+    if (!isMeaningfulContent(resume)) {
+      toast.error(VALIDATION_ERROR);
       return;
     }
 
@@ -46,28 +51,33 @@ export default function AnalysisTool() {
     setErrorMessage('');
 
     try {
-      // BACKEND INTEGRATION POINT:
-      // Replace the mock analysis below with a real API call:
-      // const response = await fetch('/api/analyze', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ jobDescription, resume }),
-      // });
-      // if (!response.ok) throw new Error('Analysis failed');
-      // const data: AnalysisResult = await response.json();
-      // setResult(data);
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeText: resume.trim(),
+          jobDescriptionText: jobDescription.trim(),
+        }),
+      });
 
-      // Mock analysis with realistic delay (simulates OpenAI processing time)
-      await new Promise((resolve) => setTimeout(resolve, 3200));
+      const data = await response.json();
 
-      const mockResult = generateMockAnalysis(jobDescription, resume);
-      setResult(mockResult);
+      if (!response.ok) {
+        const msg = data?.error || 'Analysis failed. Please try again.';
+        setAppState('error');
+        setErrorMessage(msg);
+        toast.error(msg);
+        return;
+      }
+
+      setResult(data as AnalysisResult);
       setAppState('results');
       toast.success('Analysis complete — your report is ready.');
     } catch {
+      const msg = 'Analysis failed. Check your connection and try again.';
       setAppState('error');
-      setErrorMessage('Analysis failed. Check your connection and try again.');
-      toast.error('Analysis failed. Please try again.');
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   };
 
@@ -161,116 +171,4 @@ export default function AnalysisTool() {
       )}
     </div>
   );
-}
-
-// Mock analysis engine — replace with OpenAI API call in /api/analyze route
-function generateMockAnalysis(_jd: string, _resume: string): AnalysisResult {
-  const score = 72;
-  return {
-    overallScore: score,
-    callbackPotential: 'Medium',
-    applicationCompetitiveness: 'Above Average — your profile aligns with most core requirements but gaps in cloud infrastructure and CI/CD tooling reduce competitiveness against senior candidates.',
-    keywordCoverage: 68,
-    keywordsFound: [
-      'React', 'TypeScript', 'REST APIs', 'Agile', 'Git', 'Node.js',
-      'UI/UX', 'Performance optimization', 'Code review', 'Team collaboration',
-      'JavaScript', 'Responsive design',
-    ],
-    keywordsMissing: [
-      'AWS', 'Docker', 'Kubernetes', 'CI/CD', 'GraphQL',
-      'Microservices', 'Jest', 'Cypress', 'Redis', 'PostgreSQL',
-    ],
-    strengths: [
-      {
-        title: 'Strong Frontend Engineering Background',
-        description: 'Your 4+ years of React and TypeScript experience directly matches the role\'s primary technical requirements. Specific mentions of performance optimization and component architecture signal seniority.',
-      },
-      {
-        title: 'Quantified Impact on Key Projects',
-        description: 'Bullet points like "reduced load time by 40%" and "increased user retention by 18%" stand out to hiring managers and ATS systems alike. This is above average for candidates at this level.',
-      },
-      {
-        title: 'Agile & Cross-functional Collaboration',
-        description: 'Multiple references to sprint planning, design handoffs, and stakeholder communication align well with the job\'s emphasis on cross-team delivery.',
-      },
-      {
-        title: 'Open Source Contributions Mentioned',
-        description: 'Reference to open source work signals initiative and public code quality — a differentiator that many candidates at this level lack.',
-      },
-    ],
-    weakAreas: [
-      {
-        title: 'No Cloud Infrastructure Experience Mentioned',
-        description: 'The job description requires AWS (EC2, S3, Lambda) experience. Your resume has no mention of cloud platforms, deployment pipelines, or infrastructure-as-code. This is a critical gap for a senior role.',
-        severity: 'high',
-      },
-      {
-        title: 'Testing Stack Absent',
-        description: 'Jest and Cypress appear 3 times in the job description as requirements. Your resume does not mention any testing frameworks, which is a significant red flag for a senior frontend engineer role.',
-        severity: 'high',
-      },
-      {
-        title: 'No GraphQL or API Design Experience',
-        description: 'The role involves GraphQL API consumption and schema design. REST API experience is present but GraphQL is not mentioned anywhere in your resume.',
-        severity: 'medium',
-      },
-      {
-        title: 'Leadership Scope Understated',
-        description: 'The role requires mentoring junior developers and leading technical direction. Your resume mentions collaboration but does not demonstrate ownership or mentorship outcomes.',
-        severity: 'medium',
-      },
-      {
-        title: 'Company Context Missing for Two Roles',
-        description: 'Two of your listed positions lack company size or industry context. Hiring managers at this company prefer candidates who have scaled products at comparable company stages.',
-        severity: 'low',
-      },
-    ],
-    improvements: [
-      {
-        area: 'Add Cloud Platform Exposure',
-        suggestion: 'Even if AWS wasn\'t your primary responsibility, add any deployment, S3 usage, or Lambda experience you have. If minimal, consider adding a brief "currently completing AWS Solutions Architect Associate" to show initiative.',
-      },
-      {
-        area: 'Include Testing Frameworks Explicitly',
-        suggestion: 'Add a "Testing: Jest, React Testing Library" line to your skills section. If you have tested components, rewrite those bullets to explicitly mention test coverage improvements or TDD practices.',
-      },
-      {
-        area: 'Reframe Collaboration as Leadership',
-        suggestion: 'Replace "worked with junior developers" with "mentored 2 junior engineers through code reviews and pair programming, reducing PR turnaround time by 30%." Specificity converts weak bullets into strong ones.',
-      },
-      {
-        area: 'Add GraphQL to Technical Skills',
-        suggestion: 'If you\'ve consumed any GraphQL APIs (even in personal projects), list it explicitly. The job description mentions it as a requirement, and its absence is likely triggering ATS filtering.',
-      },
-      {
-        area: 'Strengthen Summary Statement',
-        suggestion: 'Your current summary is generic. Rewrite it to mirror the job title and 2–3 core requirements: "Senior Frontend Engineer with 5 years building scalable React/TypeScript applications, specializing in performance optimization and cross-functional delivery in agile environments."',
-      },
-    ],
-    bulletRewrites: [
-      {
-        original: 'Worked on improving the performance of the web application.',
-        rewritten: 'Identified and resolved 12 rendering bottlenecks in a high-traffic React application, reducing Time-to-Interactive by 38% and improving Core Web Vitals scores from 61 to 94 (Lighthouse).',
-        reason: 'Original lacks specificity, metrics, and technical depth. Rewrite demonstrates measurable impact and names the exact performance framework the JD references.',
-      },
-      {
-        original: 'Collaborated with designers to implement UI features.',
-        rewritten: 'Partnered with product design team to translate Figma prototypes into pixel-perfect, accessible React components, delivering 3 major feature releases on schedule across Q2–Q3 2025.',
-        reason: 'Original is passive and generic. Rewrite names the design tool, establishes ownership, and ties work to delivery outcomes.',
-      },
-      {
-        original: 'Helped junior developers with code reviews.',
-        rewritten: 'Mentored 3 junior frontend engineers through structured weekly code reviews and pair programming sessions, reducing average PR review cycles from 4 days to 1.5 days.',
-        reason: 'Original undersells leadership. Rewrite quantifies mentorship impact and frames it as a measurable team efficiency improvement — directly addressing the JD\'s leadership requirement.',
-      },
-      {
-        original: 'Worked on building REST APIs and integrating them into the frontend.',
-        rewritten: 'Designed and integrated 8 RESTful API endpoints using Node.js/Express, collaborating with backend engineers to define contract specs that reduced frontend-backend integration bugs by 45%.',
-        reason: 'Original is vague about scope and ownership. Rewrite establishes technical ownership, cross-functional collaboration, and quantified quality improvement.',
-      },
-    ],
-    experienceAlignment: 74,
-    skillsMatchPercent: 62,
-    atsRiskLevel: 'Medium',
-  };
 }

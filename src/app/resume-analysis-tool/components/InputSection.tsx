@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import { Briefcase, FileText, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, X, Type } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface InputSectionProps {
   jobDescription: string;
@@ -41,14 +42,9 @@ async function extractTextFromFile(file: File): Promise<string> {
     });
   }
 
-  if (ext === 'pdf') {
-    // PDF parsing placeholder — returns a helpful message
-    return `[PDF file uploaded: "${file.name}"]\n\nPDF text extraction requires a server-side parser. To enable full PDF support, integrate a library such as pdf-parse on the /api/parse-file route and call it here.\n\nFor now, please paste the text content of your PDF manually below.`;
-  }
-
-  if (ext === 'docx' || ext === 'doc') {
-    // DOCX parsing placeholder — returns a helpful message
-    return `[DOCX file uploaded: "${file.name}"]\n\nDOCX text extraction requires a server-side parser. To enable full DOCX support, integrate mammoth.js on the /api/parse-file route and call it here.\n\nFor now, please paste the text content of your DOCX manually below.`;
+  if (ext === 'pdf' || ext === 'docx' || ext === 'doc') {
+    // PDF/DOCX require server-side parsing — prompt user to paste text manually
+    throw new Error('We couldn\'t read this file. Please try another file or paste the text manually.');
   }
 
   return '';
@@ -217,8 +213,11 @@ export default function InputSection({
       onJobDescriptionChange(text);
       setJdUploadedFile({ name: file.name, type: file.type, size: file.size });
       setJdMode('paste');
-    } catch {
-      // silently fall through — user can paste manually
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'We couldn\'t read this file. Please try another file or paste the text manually.';
+      onJobDescriptionChange('');
+      setJdMode('paste');
+      toast.error(msg);
     } finally {
       setJdExtracting(false);
     }
@@ -231,8 +230,11 @@ export default function InputSection({
       onResumeChange(text);
       setResumeUploadedFile({ name: file.name, type: file.type, size: file.size });
       setResumeMode('paste');
-    } catch {
-      // silently fall through — user can paste manually
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'We couldn\'t read this file. Please try another file or paste the text manually.';
+      onResumeChange('');
+      setResumeMode('paste');
+      toast.error(msg);
     } finally {
       setResumeExtracting(false);
     }
