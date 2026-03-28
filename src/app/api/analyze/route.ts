@@ -92,7 +92,11 @@ ${resumeText.trim()}`;
       }
     );
 
-    const rawContent = aiResponse?.choices?.[0]?.message?.content;
+    const rawContent =
+      aiResponse?.choices?.[0]?.message?.content ||
+      aiResponse?.content ||
+      aiResponse?.output_text ||
+      aiResponse?.text;
 
     if (!rawContent) {
       return NextResponse.json(
