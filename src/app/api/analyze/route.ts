@@ -80,10 +80,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    // 🔥 CAMBIO CLAVE: ahora usamos GEMINI
+    const apiKey = process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OPENAI_API_KEY is not configured.' },
+        { error: 'GEMINI_API_KEY is not configured.' },
         { status: 500 }
       );
     }
@@ -102,8 +104,9 @@ ${resumeText.trim()}`
       }
     ];
 
+    // 🔥 CAMBIO CLAVE: modelo GEMINI
     const aiResponse = await completion({
-      model: 'gpt-4o',
+      model: 'gemini-2.0-flash',
       messages,
       stream: false,
       api_key: apiKey,
