@@ -40,18 +40,31 @@ export async function POST(request: NextRequest) {
     let text = "";
 
     if (isPdf) {
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.js");
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js");
       const uint8Array = new Uint8Array(arrayBuffer);
 
-      const loadingTask = pdfjs.getDocument({ data: uint8Array });
-      const pdf = await loadingTask.promise;
+      if ("GlobalWorkerOptions" in pdfjsLib) {
+        (pdfjsLib as any).GlobalWorkerOptions.workerSrc = "";
+      }
 
+      const loadingTask = (pdfjsLib as any).getDocument({
+        data: uint8Array,
+        disableWorker: true,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true,
+      });
+
+      const pdf = await loadingTask.promise;
       let fullText = "";
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent();
-        const strings = content.items.map((item: any) => item.str || "");
+        const strings = content.items.map((item: any) => {
+          if (item && typeof item.str === "string") return item.str;
+          return "";
+        });
         fullText += strings.join(" ") + " ";
       }
 
