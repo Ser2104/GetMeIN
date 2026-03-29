@@ -36,28 +36,33 @@ function getFileTypeLabel(name: string): string {
 async function extractTextFromFile(file: File): Promise<string> {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
 
-  if (ext === 'txt') {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve((e.target?.result as string) ?? '');
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
-  }
-
   if (ext === 'doc') {
-    throw new Error('Legacy .doc files are not fully supported yet. Please convert your file to .docx or PDF and try again.');
+    throw new Error('Legacy .doc files are not supported. Please convert to .docx or PDF and try again.');
   }
 
-  if (ext === 'pdf' || ext === 'docx') {
-    throw new Error('We couldn\'t read this file. Please try another file or paste the text manually.');
+  if (ext !== 'pdf' && ext !== 'docx' && ext !== 'txt') {
+    throw new Error('Unsupported file type. Please upload a PDF, DOCX, or TXT file.');
   }
 
-  if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') {
-    throw new Error('Image files cannot be parsed as text. Please paste your content manually or upload a PDF, DOCX, or TXT file.');
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch('/api/extract-text', {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.error ?? `Extraction failed (status ${response.status})`);
   }
 
-  return '';
+  if (!data?.text) {
+    throw new Error('No text was returned from the file. Please try another file or paste the text manually.');
+  }
+
+  return data.text as string;
 }
 
 interface FileInputPanelProps {
@@ -106,7 +111,7 @@ function FileInputPanel({ accentColor, uploadedFile, onFileSelect, onClear, disa
         <div className="text-center">
           <p className="text-sm font-semibold text-white truncate max-w-[220px]">{uploadedFile.name}</p>
           <p className="text-xs text-zinc-500 mt-0.5">{getFileTypeLabel(uploadedFile.name)} · {(uploadedFile.size / 1024).toFixed(1)} KB</p>
-          <p className={`text-xs font-medium mt-1 ${accent.text}`}>File uploaded successfully</p>
+          <p className={`text-xs font-medium mt-1 ${accent.text}`}>Text extracted successfully</p>
         </div>
         <button
           onClick={onClear}
@@ -139,12 +144,12 @@ function FileInputPanel({ accentColor, uploadedFile, onFileSelect, onClear, disa
       <div className="text-center px-4">
         <p className="text-sm font-semibold text-zinc-200">Drop your file here</p>
         <p className="text-xs text-zinc-500 mt-1">or click to browse</p>
-        <p className="text-xs text-zinc-600 mt-2">Supports PDF, DOCX, DOC, TXT, PNG, JPG</p>
+        <p className="text-xs text-zinc-600 mt-2">Supports PDF, DOCX, TXT</p>
       </div>
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+        accept=".pdf,.docx,.txt"
         onChange={handleFileChange}
         className="hidden"
         disabled={disabled}
@@ -224,7 +229,7 @@ export default function InputSection({
       setJdUploadedFile({ name: file.name, type: file.type, size: file.size });
       setJdMode('paste');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'We couldn\'t read this file. Please try another file or paste the text manually.';
+      const msg = err instanceof Error ? err.message : 'Could not read this file. Please try another file or paste the text manually.';
       onJobDescriptionChange('');
       setJdMode('paste');
       toast.error(msg);
@@ -241,7 +246,7 @@ export default function InputSection({
       setResumeUploadedFile({ name: file.name, type: file.type, size: file.size });
       setResumeMode('paste');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'We couldn\'t read this file. Please try another file or paste the text manually.';
+      const msg = err instanceof Error ? err.message : 'Could not read this file. Please try another file or paste the text manually.';
       onResumeChange('');
       setResumeMode('paste');
       toast.error(msg);
@@ -280,7 +285,7 @@ export default function InputSection({
             </div>
           </div>
           <p className="text-xs text-zinc-500 -mt-1">
-            {jdMode === 'paste' ? 'Paste the full job posting including responsibilities and requirements.' : 'Upload a PDF, DOCX, DOC, TXT, or image file of the job posting.'}
+            {jdMode === 'paste' ? 'Paste the full job posting including responsibilities and requirements.' : 'Upload a PDF, DOCX, or TXT file of the job posting.'}
           </p>
 
           {jdMode === 'paste' ? (
@@ -313,7 +318,7 @@ export default function InputSection({
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-zinc-900/70 backdrop-blur-sm">
                   <div className="flex items-center gap-2 text-sm text-zinc-300">
                     <Loader2 size={16} className="animate-spin text-indigo-400" />
-                    Extracting text…
+                    Reading file…
                   </div>
                 </div>
               )}
@@ -351,7 +356,7 @@ export default function InputSection({
             </div>
           </div>
           <p className="text-xs text-zinc-500 -mt-1">
-            {resumeMode === 'paste' ? 'Paste the plain-text version of your resume. Include all sections.' : 'Upload a PDF, DOCX, DOC, TXT, or image file of your resume.'}
+            {resumeMode === 'paste' ? 'Paste the plain-text version of your resume. Include all sections.' : 'Upload a PDF, DOCX, or TXT file of your resume.'}
           </p>
 
           {resumeMode === 'paste' ? (
@@ -384,7 +389,7 @@ export default function InputSection({
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-zinc-900/70 backdrop-blur-sm">
                   <div className="flex items-center gap-2 text-sm text-zinc-300">
                     <Loader2 size={16} className="animate-spin text-emerald-400" />
-                    Extracting text…
+                    Reading file…
                   </div>
                 </div>
               )}
