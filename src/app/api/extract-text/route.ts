@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     let text = "";
 
     if (isPdf) {
       const pdfjs = await import("pdfjs-dist/legacy/build/pdf.js");
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-      const loadingTask = pdfjs.getDocument({ data: buffer });
+      const loadingTask = pdfjs.getDocument({ data: uint8Array });
       const pdf = await loadingTask.promise;
 
       let fullText = "";
@@ -58,9 +58,11 @@ export async function POST(request: NextRequest) {
       text = fullText;
     } else if (isDocx) {
       const mammoth = await import("mammoth");
+      const buffer = Buffer.from(arrayBuffer);
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
     } else if (isTxt) {
+      const buffer = Buffer.from(arrayBuffer);
       text = buffer.toString("utf-8");
     }
 
