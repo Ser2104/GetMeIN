@@ -9,13 +9,13 @@ export default function PageHeader() {
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
           <span className="font-bold text-lg tracking-tight text-white hidden sm:block">
-            GetMeIn<span className="text-gradient">Me</span>
+            Get<span className="text-gradient">Me</span>In
           </span>
         </div>
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
           <Sparkles size={13} className="text-indigo-400" />
-          <span className="text-xs font-semibold text-indigo-300 tracking-wide">Powered by OpenAI</span>
+          <span className="text-xs font-semibold text-indigo-300 tracking-wide">Powered by Gemini</span>
         </div>
       </div>
     </header>
