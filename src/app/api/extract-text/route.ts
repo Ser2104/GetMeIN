@@ -41,9 +41,21 @@ export async function POST(request: NextRequest) {
     let text = "";
 
     if (isPdf) {
-      const pdfParse = (await import("pdf-parse")).default;
-      const result = await pdfParse(buffer);
-      text = result.text;
+      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.js");
+
+      const loadingTask = pdfjs.getDocument({ data: buffer });
+      const pdf = await loadingTask.promise;
+
+      let fullText = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map((item: any) => item.str || "");
+        fullText += strings.join(" ") + " ";
+      }
+
+      text = fullText;
     } else if (isDocx) {
       const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ buffer });
@@ -62,10 +74,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ text: cleanedText });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Text extraction error:", err);
     return NextResponse.json(
-      { error: "Failed to extract text from the file." },
+      {
+        error: err?.message || "Failed to extract text from the file.",
+      },
       { status: 500 }
     );
   }
