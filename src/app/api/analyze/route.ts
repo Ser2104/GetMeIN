@@ -106,7 +106,7 @@ ${resumeText.trim()}`
 
     // 🔥 CAMBIO CLAVE: modelo GEMINI
     const aiResponse = await completion({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       messages,
       stream: false,
       api_key: apiKey,
