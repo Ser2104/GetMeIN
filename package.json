@@ -58,18 +58,16 @@
     "mammoth": "^1.12.0",
     "next": "15.1.11",
     "openai": "^4.73.1",
-    "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "3.11.174",
     "react": "19.0.3",
     "react-dom": "19.0.3",
     "recharts": "^2.15.2",
-    "sonner": "^1.7.1"
+    "sonner": "^1.7.1",
+    "unpdf": "1.4.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@netlify/plugin-nextjs": "^5.11.1",
     "@types/node": "^20",
-    "@types/pdf-parse": "^1.1.5",
     "@types/react": "19.0.3",
     "@types/react-dom": "19.0.3",
     "@typescript-eslint/eslint-plugin": "^8.29.0",

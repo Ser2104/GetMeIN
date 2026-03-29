@@ -33,12 +33,6 @@ const nextConfig = {
       }],
     });
 
-    // Ignore optional 'canvas' peer dependency from pdfjs-dist
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      canvas: false,
-    };
-
     return config;
   },
 };

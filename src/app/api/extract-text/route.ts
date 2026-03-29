@@ -40,35 +40,10 @@ export async function POST(request: NextRequest) {
     let text = "";
 
     if (isPdf) {
-      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js");
+      const { extractText } = await import("unpdf");
       const uint8Array = new Uint8Array(arrayBuffer);
-
-      if ("GlobalWorkerOptions" in pdfjsLib) {
-        (pdfjsLib as any).GlobalWorkerOptions.workerSrc = "";
-      }
-
-      const loadingTask = (pdfjsLib as any).getDocument({
-        data: uint8Array,
-        disableWorker: true,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-      });
-
-      const pdf = await loadingTask.promise;
-      let fullText = "";
-
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-        const page = await pdf.getPage(pageNumber);
-        const content = await page.getTextContent();
-        const strings = content.items.map((item: any) => {
-          if (item && typeof item.str === "string") return item.str;
-          return "";
-        });
-        fullText += strings.join(" ") + " ";
-      }
-
-      text = fullText;
+      const { text: extracted } = await extractText(uint8Array, { mergePages: true });
+      text = extracted;
     } else if (isDocx) {
       const mammoth = await import("mammoth");
       const buffer = Buffer.from(arrayBuffer);
