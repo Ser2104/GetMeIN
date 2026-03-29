@@ -32,6 +32,13 @@ const nextConfig = {
         loader: '@dhiwise/component-tagger/nextLoader',
       }],
     });
+
+    // Ignore optional 'canvas' peer dependency from pdfjs-dist
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    };
+
     return config;
   },
 };
