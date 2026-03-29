@@ -15,13 +15,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  const fileName =
-    file instanceof File ? file.name : "upload";
+  const fileName = file instanceof File ? file.name : "upload";
   const mimeType = file.type;
   const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
 
-  const isPdf =
-    mimeType === "application/pdf" || extension === "pdf";
+  const isPdf = mimeType === "application/pdf" || extension === "pdf";
   const isDocx =
     mimeType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
@@ -31,8 +29,7 @@ export async function POST(request: NextRequest) {
   if (!isPdf && !isDocx && !isTxt) {
     return NextResponse.json(
       {
-        error:
-          "Unsupported file type. Only PDF, DOCX, and TXT files are supported.",
+        error: "Unsupported file type. Only PDF, DOCX, and TXT files are supported.",
       },
       { status: 415 }
     );
@@ -55,7 +52,16 @@ export async function POST(request: NextRequest) {
       text = buffer.toString("utf-8");
     }
 
-    return NextResponse.json({ text });
+    const cleanedText = text.replace(/\s+/g, " ").trim();
+
+    if (!cleanedText || cleanedText.length < 20) {
+      return NextResponse.json(
+        { error: "Could not extract meaningful text from the file." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ text: cleanedText });
   } catch (err) {
     console.error("Text extraction error:", err);
     return NextResponse.json(
